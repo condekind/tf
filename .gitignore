@@ -2,6 +2,7 @@
 *.log
 *.ibc
 *.rbc
+*.sbc
 *.exe
 *.bc
 *.o

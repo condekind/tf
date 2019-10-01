@@ -25,7 +25,6 @@ function unset_vars() {
   unset STDIN
   unset STDOUT
   unset RUN_OPTIONS
-
   unset CPU2006
 }
 

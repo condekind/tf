@@ -1,0 +1,7 @@
+*.csv
+*.exe
+*.ibc
+*.rbc
+*.bc
+*.o
+.DS_Store

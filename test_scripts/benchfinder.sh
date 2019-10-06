@@ -13,3 +13,21 @@ IFS=$'\n' read -d '' -r -a src_folders <<< $(
 for i in "${src_folders[@]}"; do
   echo $i
 done;
+
+function walk() {
+
+  if [[ $# == 0 ]]; then echo "biziu"; exit; else dirs=("$@"); fi
+
+  # current suite root
+  parent_dir=$(pwd)
+  for dir in "$@"; do
+    cd "$parent_dir"/"$dir"
+    echo "Sourcing info.sh from $(pwd)"
+    set_vars
+    cleanup
+    compile  # //
+    unset_vars
+    echo "------------------------------------------------------------"
+    cd "$parent_dir"
+  done
+}

@@ -1,36 +1,42 @@
 #!/bin/bash
 
+# this is left as an example 
 function compile() {
   
   if [[ -n $CPU2006 && $CPU2006 -eq 1 ]]; then
-    # .linux or .llvm -> .rbc
+    # rbc -> lnk
     $LLVM_PATH/opt -S $rbc_name -o $lnk_name
   else
-
-    parallel --jobs=${JOBS} $LLVM_PATH/$COMPILER $COMPILE_FLAGS  \
-      -Xclang -disable-O0-optnone -S -c -emit-llvm {} -o {.}.cbc \
-      ::: "${source_files[@]}"  # source_files is set by the current
-      # benchmark's info.sh and contains all the files we're gonna compile
+    # source_files is the variable with all the files we're gonna compile
+    parallel --tty --jobs=${JOBS} $LLVM_PATH/$COMPILER $COMPILE_FLAGS \
+      -Xclang -disable-O0-optnone \
+      -S -c -emit-llvm {} -o {.}.bc ::: "${source_files[@]}" 
+    [[ $? -ne 0 ]] && echo "Error compiling ${source_files[@]} into ${lnk_name/\.rbc/\.bc}" >> $ERRFILE
     
-    parallel --jobs=${JOBS} $LLVM_PATH/opt -S {.}.cbc -o {.}.obc ::: "${source_files[@]}"    
+    parallel --tty --jobs=${JOBS} $LLVM_PATH/opt -S {.}.bc -o {.}.rbc ::: "${source_files[@]}"
+    [[ $? -ne 0 ]] && echo "Error converting .bc's into .rbc's for ${lnk_name/\.rbc/}" >> $ERRFILE
   
-    # merge all the obc's into a big rbc:
-    $LLVM_PATH/llvm-link -S *.obc -o $lnk_name
+    #Generate all the bcs into a big bc:
+    $LLVM_PATH/llvm-link -S *.rbc -o $lnk_name
   fi
 
-  # cleans temporary files
-  rm -rf *.cbc *.obc
+  OUTBUFFER=".__OUTPUTBUFFER.tmp"
 
-  CURRDIR=$(pwd)
-  CURRBEN=${CURRDIR#${BENCHSDIR}}
-  ST_NAME=${CURRBEN/\/*/}
+  echo ">>> SUITE: ${bench}" >> $OUTBUFFER
+  echo ">>> BENCHMARK: ${bench_name}" >> $OUTBUFFER
+  $LLVM_PATH/opt -mem2reg -O0 -instcount $USER_PASSES -stats -S $lnk_name -disable-output 2>>$OUTBUFFER && cat $OUTBUFFER >> $OUTFILE
 
-  echo "{\"suite\":\"${ST_NAME}\",\"file\":\"$(basename $lnk_name)\",\"stats\":\"__DATA_BEGIN__" >>$OUT_FILE
-  $LLVM_PATH/opt -mem2reg -O0 -instcount -stats -S $lnk_name -disable-output 2>>$OUT_FILE
-  echo -e "\n\"},"
+  [[ $? -ne 0 ]] && cat $OUTBUFFER >> $ERRFILE
 
-  unset CURRDIR
-  unset CURRBEN
-  unset ST_NAME
+  rm $OUTBUFFER
+  unset OUTBUFFER
+
+  
+#  # optimizations
+#  $LLVM_PATH/opt -S ${OPT} $lnk_name -o $prf_name
+#  # Compile our instrumented file, in IR format, to x86:
+#  $LLVM_PATH/llc -filetype=obj $prf_name -o $obj_name ;
+#  # Compile everything now, producing a final executable file:
+#  $LLVM_PATH/$COMPILER -lm $obj_name -o $exe_name ;
   
 }

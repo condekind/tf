@@ -31,9 +31,11 @@ function unset_vars() {
 }
 
 function set_vars(){
-  source info.sh
 
-  # Let's set the variables that are unset
+  # variables specific to each benchmark, set on /bench/folder/info.sh
+  source info.sh
+  # removes math library linking flag, which isn't used with clang's -c param
+  [[ $COMPILE -eq 1 ]] && [[ $EXEC -eq 0 ]] && COMPILE_FLAGS="${COMPILE_FLAGS/\-lm/}"
 
   # sometimes we need to use clang++
   [[ -n $COMPILER ]] || COMPILER=clang
@@ -95,6 +97,8 @@ function walk() {
   parent_dir=$(pwd)
 
   for dir in "${dirs[@]}"; do
+
+  	if [[ ! -d "$parent_dir"/"$dir" ]]; then continue; fi
 
     cd "$parent_dir"/"$dir" ;
 

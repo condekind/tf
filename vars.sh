@@ -24,7 +24,7 @@ EDGECOUNTERPASS="/home/condekind/repos/llvm-ep/build/EdgeCounter/EdgeCounter.so"
 [[ -n $RUNTIME ]] || RUNTIME=0
 
 # Execute the benchmark
-[[ -n $EXEC ]] || EXEC=1
+[[ -n $EXEC ]] || EXEC=0
 
 # Compile
 [[ -n $COMPILE ]] || COMPILE=1

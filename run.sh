@@ -95,6 +95,7 @@ function walk() {
   parent_dir=$(pwd)
 
   for dir in "${dirs[@]}"; do
+
     cd "$parent_dir"/"$dir" ;
 
     d=$(basename $(pwd))

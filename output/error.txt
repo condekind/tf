@@ -1,0 +1,5 @@
+Error compiling tramp3d-v4.cpp into tramp3d-v4.bc
+Error converting .bc's into .rbc's for tramp3d-v4
+>>> SUITE: tramp3d-v4
+>>> BENCHMARK: tramp3d-v4
+/home/condekind/stuff/llvm/build/bin/opt: tramp3d-v4.rbc: error: Could not open input file: No such file or directory

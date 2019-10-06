@@ -1,0 +1,5 @@
+When COMPILE=1, substitute compile flags to remove '-lm'.
+Currently causing a lot of warnings.
+
+Fix tramp3d-v4 not compiling. It tries to include <cstddef> which is not
+available (why will this happen? clang was called with -c)

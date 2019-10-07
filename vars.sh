@@ -69,7 +69,7 @@ fi
 # -- # -- # -- # -- # -- # -- # -- # -- # -- # -- # -- # -- # -- # -- # -- # -- 
 
 # LLVM_PATH  => The place where I have all the LLVM tools
-LLVM_PATH="/home/condekind/stuff/llvm/build/bin"
+LLVM_PATH="/home/condekind/LLVM/9.0.0/build/bin"
 
 [[ -d "${LLVM_PATH}" ]] || {
 	echo "One must define LLVM_PATH before running tf"

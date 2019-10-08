@@ -1,0 +1,36 @@
+{
+  "entries" :
+  [
+    {
+      "suitename"           : "ASC_Sequoia",
+      "benchname"           : "AMGmk",
+      "benchdata"           :
+      {
+        "edgecounter::number_of_edges" : 2179,
+        "varcounter::number_of_named_variables" : 1337,
+        "varcounter::number_of_variable_uses" : 6666
+      },
+      "errorinfo"           : "error message",
+      "source_files"        :
+      [
+        "a.c",
+        "b.c",
+        "c.c"
+      ],
+      "has_runtime_info"    : "",
+      "COMPILE_FLAGS"       : "",
+      "COMPILER"            : "",
+      "HASH_PROGRAM_OUTPUT" : "",
+      "PROJ_SRC_DIR"        : "",
+      "RUN_OPTIONS"         : "",
+      "STDIN"               : "",
+      "UNPARSED_INFO"       : ""
+    },
+    {
+      "suitename" : "ASC_Sequoia",
+      "benchname" : "bob",
+      "benchdata" : "42 instcount - count of insts",
+      "errorinfo" : "err"
+    }
+  ]
+}

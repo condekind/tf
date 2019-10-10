@@ -8,13 +8,12 @@ function compile() {
     $LLVM_PATH/opt -S $rbc_name -o $lnk_name
   else
     # source_files is the variable with all the files we're gonna compile
-    parallel --tty --jobs=${JOBS} $LLVM_PATH/$COMPILER $COMPILE_FLAGS \
-      -Xclang -disable-O0-optnone \
-      -S -c -emit-llvm {} -o {.}.bc ::: "${source_files[@]}" 
-    [[ $? -ne 0 ]] && echo "Error compiling ${source_files[@]} into ${lnk_name/\.rbc/\.bc}" >> $ERRFILE
+    parallel --tty --jobs=${JOBS} $LLVM_PATH/$COMPILER $COMPILE_FLAGS -Xclang \
+    -disable-O0-optnone -S -c -emit-llvm {} -o {.}.bc \
+    ::: "${source_files[@]}" 2>>$ERRFILE
     
-    parallel --tty --jobs=${JOBS} $LLVM_PATH/opt -S {.}.bc -o {.}.rbc ::: "${source_files[@]}"
-    [[ $? -ne 0 ]] && echo "Error converting .bc's into .rbc's for ${lnk_name/\.rbc/}" >> $ERRFILE
+    parallel --tty --jobs=${JOBS} $LLVM_PATH/opt -S {.}.bc -o {.}.rbc \
+    ::: "${source_files[@]}" 2>>$ERRFILE
   
     #Generate all the bcs into a big bc:
     $LLVM_PATH/llvm-link -S *.rbc -o $lnk_name
@@ -22,21 +21,42 @@ function compile() {
 
   OUTBUFFER=".__OUTPUTBUFFER.tmp"
 
-  echo ">>> SUITE: ${bench}" >> $OUTBUFFER
-  echo ">>> BENCHMARK: ${bench_name}" >> $OUTBUFFER
-  $LLVM_PATH/opt -mem2reg -O0 -instcount $USER_PASSES -stats -S $lnk_name -disable-output 2>>$OUTBUFFER && cat $OUTBUFFER >> $OUTFILE
+  echo "  {"                                  >> "${OUTBUFFER}"
+  echo "    \"suitename\":\"${bench}\","      >> "${OUTBUFFER}"
+  echo "    \"benchname\":\"${bench_name}\"," >> "${OUTBUFFER}"
+  echo "    \"benchdata\":"                   >> "${OUTBUFFER}"
+  echo "    {"                                >> "${OUTBUFFER}"
 
-  [[ $? -ne 0 ]] && cat $OUTBUFFER >> $ERRFILE
+  $LLVM_PATH/opt                                      \
+        -mem2reg                                      \
+        -O0                                           \
+        -instcount                                    \
+        ${USERPASSES[@]}                              \
+        -stats                                        \
+        -S                                            \
+        ${lnk_name}                                   \
+        -disable-output  2> >(tee)                    |
+    sed -e "/^===-*===$/d"                            \
+        -e "/ *\.\.\. Stat*/d"                        \
+        -e "/^$/d"                                    \
+        -e "s/ *- */::/g"                             \
+        -e "s/ \+/ /g"                                \
+        -e "s/^ //g"                                  \
+        -e "s/ \+/_/g"                                \
+        -e "s/_/ /1"                                  \
+        -e "s/\([0-9]\+\) \(.\+\)/\"\2\" : \1,/g"     \
+        -e "s/^\(^$\)*/      \1/g"                    |
+    sed -z -e "s/,\([^,]\)*$/\1/1"  >> "${OUTBUFFER}" &&
+    cat "${OUTBUFFER}"              >> "${OUTFILE}"
 
-  rm $OUTBUFFER
+  if [[ $? -ne 0 ]]; then
+    cat   "${OUTBUFFER}"            >> "${ERRFILE}"
+  else
+    echo "    }"                    >> "${OUTFILE}"
+    echo "  },"                     >> "${OUTFILE}"
+  fi
+
+  rm   $OUTBUFFER
   unset OUTBUFFER
-
-  
-#  # optimizations
-#  $LLVM_PATH/opt -S ${OPT} $lnk_name -o $prf_name
-#  # Compile our instrumented file, in IR format, to x86:
-#  $LLVM_PATH/llc -filetype=obj $prf_name -o $obj_name ;
-#  # Compile everything now, producing a final executable file:
-#  $LLVM_PATH/$COMPILER -lm $obj_name -o $exe_name ;
   
 }

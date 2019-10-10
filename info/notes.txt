@@ -72,3 +72,4 @@ Values found:
   source_files=('commands.c' 'job.c' 'dir.c' 'file.c' 'load.c' 'misc.c' 'main.c' 'read.c' COMPILE_FLAGS="-DHAVE_SIGLIST -DNO_LDAV -DNOMEMOPT -DPOSIX"
   source_files=("gsmain.c" "gs.c" "gp_unix.c" "utrace.c" COMPILE_FLAGS=" -lm -DNOMEMOPT -DGS_LIB_DEFAULT=\"${PROJ_SRC_DIR}:${PROJ_SRC_DIR}/fonts\""
 
+## OBS.: I'll probably change source_files to uppercase in the future

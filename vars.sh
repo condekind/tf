@@ -1,169 +1,114 @@
 #!/bin/bash
 
-# -- # -- # -- # -- # -- # -- # -- # -- # -- # -- # -- # -- # -- # -- # -- # -- 
+BASEDIR="$(pwd)"
+BENCHSDIR="$BASEDIR/src_benchmarks/"
+
+#-------------------------------------------------------------------------------
 
 # Output from passes in comp.sh
-[[ -n $OUTFILE ]] || OUTFILE="$(pwd)/output/stats.txt"
+[[ -n $OUTFILE ]]   || OUTFILE="$(pwd)/output/stats.txt"
 
 # Error from passes in comp.sh
-[[ -n $ERRFILE ]] || ERRFILE="$(pwd)/output/error.txt"
+[[ -n $ERRFILE ]]   || ERRFILE="$(pwd)/output/error.txt"
 
-VARCOUNTERPASS="/home/condekind/repos/llvm-ep/build/VarCounter/VarCounter.so"
-EDGECOUNTERPASS="/home/condekind/repos/llvm-ep/build/EdgeCounter/EdgeCounter.so"
+[[ -n $PASSFILE ]]  || PASSFILE="$(pwd)/info/passes.txt"
 
 # Output from passes in comp.sh
-[[ -n $USER_PASSES ]] || USER_PASSES=" -load ${VARCOUNTERPASS} -VarCounter -load ${EDGECOUNTERPASS} -EdgeCounter "
+[[ -n $USERPASSES ]] || readarray -t USERPASSES < $PASSFILE
 
-# -- # -- # -- # -- # -- # -- # -- # -- # -- # -- # -- # -- # -- # -- # -- # -- 
+# LLVM_PATH  => The place where I have all the LLVM tools
+echo "LLVM_PATH is set to: <${LLVM_PATH}>"
+[[ -n $LLVM_PATH ]] || LLVM_PATH="/home/condekind/LLVM/9.0.0/build/bin"
+[[ -d "${LLVM_PATH}" ]] || {
+  echo "One must define LLVM_PATH before running tf"
+  exit 1
+}
 
-# if 0, redirect benchmark output to /dev/null
-# if 1, print benchmark output to stdout
-[[ -n $DEBUG ]] || DEBUG=0
-
-# Specify the timeout. Default is INF(0)
-[[ -n $RUNTIME ]] || RUNTIME=0
-
-# Execute the benchmark
-[[ -n $EXEC ]] || EXEC=0
-
-# Compile
-[[ -n $COMPILE ]] || COMPILE=1
-
-# Instrument
-[[ -n $INSTRUMENT ]] || INSTRUMENT=0
+#-------------------------------------------------------------------------------
 
 # JOBS
 [[ -n $JOBS ]] || JOBS=1
 
-# ANALYZE
-[[ -n $ANALYZE ]] || ANALYZE=0
-
-# INSTRUMENT
-[[ -n $INSTRUMENT ]] || INSTRUMENT=0
-
-# DIFF
-[[ -n $DIFF ]] || DIFF=0
-
-[[ $DIFF -eq 1 && $DEBUG -eq 1 ]] && {
-  echo "Can't use DIFF=1 & DEBUG=1 at the same time"
-  exit 1
-}
-
 # Remove all temp files
 [[ -n CLEAN ]] || CLEAN=0
 
-# Set the lib suffix.
-suffix="dylib"
+# Set the lib SUFFIX.
+SUFFIX="dylib"
 if [[ $(uname -s) == "Linux" ]]; then
-  suffix="so"
+  SUFFIX="so"
 fi
 
-# if we're on osx, we must use `gtimeout` instead of `timeout`
-# `gtimeout` can be download from homebrew
-TIMEOUT=timeout
-if [[ $(uname -s) == "Darwin" ]]; then
-  TIMEOUT=gtimeout
-fi
+#---------------------------------Functions-------------------------------------
 
-
-# -- # -- # -- # -- # -- # -- # -- # -- # -- # -- # -- # -- # -- # -- # -- # -- 
-
-# LLVM_PATH  => The place where I have all the LLVM tools
-LLVM_PATH="/home/condekind/LLVM/9.0.0/build/bin"
-
-[[ -d "${LLVM_PATH}" ]] || {
-	echo "One must define LLVM_PATH before running tf"
-	exit 1
+function cleanup() {
+  rm -f *.bc
+  rm -f *.rbc
+  rm -f *.txt
 }
 
-# -- # -- # -- # -- # -- # -- # -- # -- # -- # -- # -- # -- # -- # -- # -- # -- 
+function unset_vars() {
+  unset COMPILER
+  unset STDIN
+  unset STDOUT
+  unset RUN_OPTIONS
+  unset source_files
 
-# THIS PART IS LEFT AS AN EXAMPLE FOR THE PEOPLE WORKING WITH PIN!
+  unset CPU2006
+}
 
-# PIN 
-[[ -n $PIN ]] || PIN=0
+function set_vars() {
 
-if [[ $PIN -eq 1 ]]; then
-  # PIN_PATH   => The place where I keep the pin source code
-	PIN_PATH=""
-  [[ -n $PIN_PATH ]] || {
-		echo "One must define the PIN before when PIN=1"
-		exit 1
-	}
+  # variables specific to each benchmark, set on /suite/.../bench/.../info.sh
+  echo "Sourcing info.sh from $(pwd)"
+  source info.sh
+
+  # bench_name comes from info.sh
+  lnk_name="$bench_name.rbc"
+  if [[ -n $CPU2006 && $CPU2006 -eq 1 ]]; then
+    if [[ $(uname -s) == "Linux" ]]; then
+      rbc_name="$bench_name.linux"
+    else
+      rbc_name="$bench_name.llvm"
+    fi
+  fi
+
+  # cpu specific stuff
+  [[ ${parent_dir} =~ "cpu2006" ]] && CPU2006=1
+  # sometimes we need to use clang++
+  [[ -n $COMPILER   ]] || COMPILER=clang
+  # We can specify STDIN to something other than /dev/stdin
+  [[ -n $STDIN      ]] || STDIN=/dev/null
+  # And STDOUT default is /dev/null. 
+  [[ -n $STDOUT     ]] || STDOUT=/dev/null
+  # removes math library linking flag, which isn't used with clang's -c param
+  COMPILE_FLAGS="${COMPILE_FLAGS/\-lm/}"
+}
+
+function walk() {
+
+  [[ $# == 0 ]] && echo "Error: no directory to walk on" && exit
   
-  # PIN_LIB    => The place where I keep the Pin lib implemented.
-	PIN_LIB=""
-  [[ -n $PIN_LIB ]] || {
-		echo "One must define PIN_LIB when PIN=1"
-		exit 1
-	}
+  dirs=("$@")
+  parent_dir=$(pwd)
 
-  # PIN_TOOL   => The tool used
-  [[ -z $PIN_TOOL ]] || {
-    echo "You must define a PIN_TOOL variable before using tf with PIN"
-    exit 1
-  }
+  for dir in "${dirs[@]}"; do
+    [[ -d "$parent_dir"/"$dir" ]] || continue
+    cd    "$parent_dir"/"$dir"
+    set_vars
+    cleanup
+    compile
+    unset_vars
+    cd    "$parent_dir"
+    echo $'\n'"--------------------------------------"$'\n'
+  done
+}
 
-  # PIN_FLAGS  => Flags to pass to PIN
-  [[ -n $PIN_FLAGS ]] || PIN_FLAGS=" "
+#-------------------------------------------------------------------------------
 
-  echo "PIN_PATH is set to $PIN_PATH"
-  echo "PIN_LIB is set to $PIN_LIB"
-  echo "PIN_TOOL is set to $PIN_TOOL"
-  
-  echo "Compiling PIN TOOLS"
-  PIN_ROOT=$PIN_PATH make -C $PIN_LIB || {
-    echo "Error compiling PIN TOOLS"
-    exit 1
-  }
-  
-fi
-
-# -- # -- # -- # -- # -- # -- # -- # -- # -- # -- # -- # -- # -- # -- # -- # --
-
-# perf
-[[ -n $OCPERF ]] || OCPERF=0
-
-if [[ $OCPERF -eq 1 ]]; then
-  #PERF EVENT
-  [[ -n $PERF_TOOL ]] || PERF_TOOL="mem_uops_retired.all_loads" # mem-stores
-
-  #USER OR KERNEL SPACE
-  [[ -n $PERF_TYPE ]] || PERF_TYPE="u"
-
-  #OUTPUT FILE
-  [[ -n $PERF_FILE ]] || PERF_FILE="perf_${PERF_TOOL}_${PERF_TYPE}.out"
-  
-	PERF_BIN=""
-	[[ -n $PERF_BIN ]] || {
-		echo "One must define PERF_BIN when PERF=1"
-		exit 1
-	}
-  
-  echo "PERF_BIN is set to $PERF_BIN"
-  echo "PERF_TOOL is set to $PERF_TOOL"
-  echo "PERF_TYPE is set to $PERF_TYPE"
-fi
-
-# -- # -- # -- # -- # -- # -- # -- # -- # -- # -- # -- # -- # -- # -- # -- # -- 
-
-BASEDIR="$(pwd)"
-
-BENCHSDIR="$BASEDIR/src_benchmarks/"
-
-# -- # -- # -- # -- # -- # -- # -- # -- # -- # -- # -- # -- # -- # -- # -- # -- 
-
-echo "#########################"
-echo "DEBUG is set to $DEBUG"
-echo "RUNTIME is set to $RUNTIME"
-echo "CLEAN is set to $CLEAN"
-echo "PIN is set to $PIN"
-echo "EXEC is set to $EXEC"
-echo "COMPILE is set to $COMPILE"
-echo "INSTRUMENT is set to $INSTRUMENT"
-echo "suffix is set to $suffix" # .so or .dylib
-echo "BASEDIR is set to $BASEDIR"
-echo "Benchmarks dir is set to $BENCHSDIR"
-echo "PASS is set to $PASS"
-echo "DIFF is set to $DIFF"
-echo "#########################"
+echo "--------------------------------------"
+echo "CLEAN       is set to $CLEAN"
+echo "SUFFIX      is set to $SUFFIX"
+echo "BASEDIR     is set to $BASEDIR"
+echo "BENCHSDIR   is set to $BENCHSDIR"
+echo "USERPASSES  is set to $USERPASSES"
+echo "--------------------------------------"

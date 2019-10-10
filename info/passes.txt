@@ -1,0 +1,2 @@
+ -load /home/condekind/repos/llvm-ep/build/VarCounter/VarCounter.so -VarCounter
+ -load /home/condekind/repos/llvm-ep/build/EdgeCounter/EdgeCounter.so -EdgeCounter

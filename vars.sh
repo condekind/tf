@@ -1,7 +1,8 @@
 #!/bin/bash
 
 BASEDIR="$(pwd)"
-BENCHSDIR="$BASEDIR/src_benchmarks/"
+SUITESDIR="$BASEDIR/suites/"
+SUITES=($( find ${SUITESDIR} -mindepth 1 -maxdepth 1 -type d ))
 
 #-------------------------------------------------------------------------------
 
@@ -27,7 +28,7 @@ echo "LLVM_PATH is set to: <${LLVM_PATH}>"
 #-------------------------------------------------------------------------------
 
 # JOBS
-[[ -n $JOBS ]] || JOBS=1
+[[ -n $JOBS ]] || JOBS=8
 
 # Remove all temp files
 [[ -n CLEAN ]] || CLEAN=0
@@ -46,34 +47,29 @@ function cleanup() {
   rm -f *.txt
 }
 
-function unset_vars() {
-  unset COMPILER
-  unset STDIN
-  unset STDOUT
-  unset RUN_OPTIONS
-  unset source_files
-
-  unset CPU2006
-}
-
 function set_vars() {
 
   # variables specific to each benchmark, set on /suite/.../bench/.../info.sh
-  echo "Sourcing info.sh from $(pwd)"
-  source info.sh
+  if [[ -f info.sh ]]; then
+		echo "Sourcing info.sh from $(pwd)"
+		source info.sh
+	else
+		BENCH_NAME=$(basename $(pwd))
+		SRC_FILES=($(find . -name '*.c' -printf '%p\n' | sort -u ))
+	fi
 
-  # bench_name comes from info.sh
-  lnk_name="$bench_name.rbc"
+  # BENCH_NAME comes from info.sh
+  lnk_name="$BENCH_NAME.rbc"
   if [[ -n $CPU2006 && $CPU2006 -eq 1 ]]; then
     if [[ $(uname -s) == "Linux" ]]; then
-      rbc_name="$bench_name.linux"
+      rbc_name="$BENCH_NAME.linux"
     else
-      rbc_name="$bench_name.llvm"
+      rbc_name="$BENCH_NAME.llvm"
     fi
   fi
 
   # cpu specific stuff
-  [[ ${parent_dir} =~ "cpu2006" ]] && CPU2006=1
+  [[ ${bench} =~ "cpu2006" ]] && CPU2006=1
   # sometimes we need to use clang++
   [[ -n $COMPILER   ]] || COMPILER=clang
   # We can specify STDIN to something other than /dev/stdin
@@ -82,6 +78,17 @@ function set_vars() {
   [[ -n $STDOUT     ]] || STDOUT=/dev/null
   # removes math library linking flag, which isn't used with clang's -c param
   COMPILE_FLAGS="${COMPILE_FLAGS/\-lm/}"
+}
+
+function unset_vars() {
+  unset COMPILER
+  unset STDIN
+  unset STDOUT
+  unset RUN_OPTIONS
+  unset BENCH_NAME
+	unset SRC_FILES
+
+  unset CPU2006
 }
 
 function walk() {
@@ -109,6 +116,6 @@ echo "--------------------------------------"
 echo "CLEAN       is set to $CLEAN"
 echo "SUFFIX      is set to $SUFFIX"
 echo "BASEDIR     is set to $BASEDIR"
-echo "BENCHSDIR   is set to $BENCHSDIR"
+echo "SUITESDIR   is set to $SUITESDIR"
 echo "USERPASSES  is set to $USERPASSES"
 echo "--------------------------------------"

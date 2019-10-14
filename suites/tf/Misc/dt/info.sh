@@ -1,0 +1,5 @@
+BENCH_NAME="dt"
+
+SRC_FILES=( "dt.c" )
+COMPILE_FLAGS=" -lm "
+RUN_OPTIONS=" "

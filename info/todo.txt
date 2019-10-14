@@ -2,5 +2,3 @@ Check if results are different if the benchmarks are compiled with:
 	LLVM8
 	LLVM9
 	LLVM10
-
-Change source_files variable in each bench's folder to SOURCEFILES

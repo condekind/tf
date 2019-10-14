@@ -1,5 +1,5 @@
-[submodule "src_benchmarks"]
-    path = src_benchmarks
+[submodule "suites"]
+    path = suites/tf
     url = https://github.com/guilhermeleobas/Benchmarks.git
     branch = master
     ignore = all

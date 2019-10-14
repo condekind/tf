@@ -3,8 +3,13 @@
 *.obc
 *.exe
 .DS_Store
-src_benchmarks/sim/Output/sim.res
+suites/tf/sim/Output/sim.res
 
 *.stats
-.temp
-test.sh
+*.temp
+
+suites/AnghaBench_WholeFiles
+suites/CSmith_10K
+suites/deepsmith
+suites/largest10
+suites/ldrgen_10K

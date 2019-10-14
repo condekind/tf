@@ -1,0 +1,7 @@
+#files in all_kernels           : 529498  # moved out of repo
+files in AnghaBench_WholeFiles  : 15264
+files in CSmith_10K             : 10000
+files in deepsmith              : 1178
+files in largest10              : 10000
+files in ldrgen_10K             : 10000
+files in tf                     : 6661

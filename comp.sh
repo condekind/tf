@@ -7,13 +7,13 @@ function compile() {
     # rbc -> lnk
     $LLVM_PATH/opt -S $rbc_name -o $lnk_name
   else
-    # source_files is the variable with all the files we're gonna compile
+    # SRC_FILES is the variable with all the files we're gonna compile
     parallel --tty --jobs=${JOBS} $LLVM_PATH/$COMPILER $COMPILE_FLAGS -Xclang \
     -disable-O0-optnone -S -c -emit-llvm {} -o {.}.bc \
-    ::: "${source_files[@]}" 2>>$ERRFILE
+    ::: "${SRC_FILES[@]}" 2>>$ERRFILE
     
     parallel --tty --jobs=${JOBS} $LLVM_PATH/opt -S {.}.bc -o {.}.rbc \
-    ::: "${source_files[@]}" 2>>$ERRFILE
+    ::: "${SRC_FILES[@]}" 2>>$ERRFILE
   
     #Generate all the bcs into a big bc:
     $LLVM_PATH/llvm-link -S *.rbc -o $lnk_name
@@ -22,8 +22,8 @@ function compile() {
   OUTBUFFER=".__OUTPUTBUFFER.tmp"
 
   echo "  {"                                  >> "${OUTBUFFER}"
-  echo "    \"suitename\":\"${bench}\","      >> "${OUTBUFFER}"
-  echo "    \"benchname\":\"${bench_name}\"," >> "${OUTBUFFER}"
+  echo "    \"suitename\":\"${suite}\","      >> "${OUTBUFFER}"
+  echo "    \"benchname\":\"${BENCH_NAME}\"," >> "${OUTBUFFER}"
   echo "    \"benchdata\":"                   >> "${OUTBUFFER}"
   echo "    {"                                >> "${OUTBUFFER}"
 

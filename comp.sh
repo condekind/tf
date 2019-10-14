@@ -9,17 +9,15 @@ function compile() {
   else
     # SRC_FILES is the variable with all the files we're gonna compile
     parallel --tty --jobs=${JOBS} $LLVM_PATH/$COMPILER $COMPILE_FLAGS -Xclang \
-    -disable-O0-optnone -S -c -emit-llvm {} -o {.}.bc \
-    ::: "${SRC_FILES[@]}" 2>>$ERRFILE
+    -disable-O0-optnone -S -c -emit-llvm {} -o {.}.bc ::: "${SRC_FILES[@]}" # 2>>$ERRFILE
     
-    parallel --tty --jobs=${JOBS} $LLVM_PATH/opt -S {.}.bc -o {.}.rbc \
-    ::: "${SRC_FILES[@]}" 2>>$ERRFILE
+    parallel --tty --jobs=${JOBS} $LLVM_PATH/opt -S {.}.bc -o {.}.rbc ::: "${SRC_FILES[@]}" # 2>>$ERRFILE
   
     #Generate all the bcs into a big bc:
     $LLVM_PATH/llvm-link -S *.rbc -o $lnk_name
   fi
 
-  OUTBUFFER=".__OUTPUTBUFFER.tmp"
+  OUTBUFFER="${BASEDIR}/.__OUTPUTBUFFER.tmp"
 
   echo "  {"                                  >> "${OUTBUFFER}"
   echo "    \"suitename\":\"${suite}\","      >> "${OUTBUFFER}"

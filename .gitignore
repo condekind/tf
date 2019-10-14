@@ -7,7 +7,9 @@ suites/tf/sim/Output/sim.res
 
 *.stats
 *.temp
+*.tmp
 
+temp/
 suites/AnghaBench_WholeFiles
 suites/CSmith_10K
 suites/deepsmith

@@ -1,0 +1,2 @@
+void A(int *a, int* b, float c, char* d) {    C(1000000, 0x1000000001);
+    }

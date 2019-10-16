@@ -2,13 +2,15 @@
 
 # this is left as an example 
 function compile() {
+  #  for CSmith, set EXTRA_FLAGS=" -I../runtime -Wno-everything "
+  EXTRA_FLAGS=""
   
   if [[ -n $CPU2006 && $CPU2006 -eq 1 ]]; then
     # rbc -> lnk
     $LLVM_PATH/opt -S $rbc_name -o $lnk_name
   else
     # SRC_FILES is the variable with all the files we're gonna compile
-    parallel --tty --jobs=${JOBS} $LLVM_PATH/$COMPILER $COMPILE_FLAGS -Xclang \
+    parallel --tty --jobs=${JOBS} $LLVM_PATH/$COMPILER $COMPILE_FLAGS $EXTRA_FLAGS -Xclang \
     -disable-O0-optnone -S -c -emit-llvm {} -o {.}.bc ::: "${SRC_FILES[@]}" # 2>>$ERRFILE
     
     parallel --tty --jobs=${JOBS} $LLVM_PATH/opt -S {.}.bc -o {.}.rbc ::: "${SRC_FILES[@]}" # 2>>$ERRFILE

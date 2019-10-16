@@ -1,0 +1,69 @@
+; ModuleID = './8041bde9b14ed8e257cb25ddead60352.c'
+source_filename = "./8041bde9b14ed8e257cb25ddead60352.c"
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-unknown-linux-gnu"
+
+; Function Attrs: noinline nounwind uwtable
+define dso_local void @A(i32* %a, i32* %b, float %c, i8* %d) #0 {
+entry:
+  %a.addr = alloca i32*, align 8
+  %b.addr = alloca i32*, align 8
+  %c.addr = alloca float, align 4
+  %d.addr = alloca i8*, align 8
+  store i32* %a, i32** %a.addr, align 8
+  store i32* %b, i32** %b.addr, align 8
+  store float %c, float* %c.addr, align 4
+  store i8* %d, i8** %d.addr, align 8
+  store float 0.000000e+00, float* %c.addr, align 4
+  br label %for.cond
+
+for.cond:                                         ; preds = %for.inc4, %entry
+  %0 = load float, float* %c.addr, align 4
+  %cmp = fcmp ogt float %0, 0.000000e+00
+  br i1 %cmp, label %for.body, label %for.end6
+
+for.body:                                         ; preds = %for.cond
+  store float 0.000000e+00, float* %c.addr, align 4
+  br label %for.cond1
+
+for.cond1:                                        ; preds = %for.inc, %for.body
+  %1 = load float, float* %c.addr, align 4
+  %2 = load float, float* %c.addr, align 4
+  %cmp2 = fcmp olt float %1, %2
+  br i1 %cmp2, label %for.body3, label %for.end
+
+for.body3:                                        ; preds = %for.cond1
+  %3 = load float, float* %c.addr, align 4
+  %dec = fadd float %3, -1.000000e+00
+  store float %dec, float* %c.addr, align 4
+  br label %for.inc
+
+for.inc:                                          ; preds = %for.body3
+  %4 = load float, float* %c.addr, align 4
+  %inc = fadd float %4, 1.000000e+00
+  store float %inc, float* %c.addr, align 4
+  br label %for.cond1
+
+for.end:                                          ; preds = %for.cond1
+  br label %for.inc4
+
+for.inc4:                                         ; preds = %for.end
+  %5 = load float, float* %c.addr, align 4
+  %inc5 = fadd float %5, 1.000000e+00
+  store float %inc5, float* %c.addr, align 4
+  br label %for.cond
+
+for.end6:                                         ; preds = %for.cond
+  %6 = load float, float* %c.addr, align 4
+  %dec7 = fadd float %6, -1.000000e+00
+  store float %dec7, float* %c.addr, align 4
+  ret void
+}
+
+attributes #0 = { noinline nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
+
+!llvm.module.flags = !{!0}
+!llvm.ident = !{!1}
+
+!0 = !{i32 1, !"wchar_size", i32 4}
+!1 = !{!"clang version 10.0.0 (https://github.com/llvm/llvm-project.git c57a9dc487e3959337b72c0779f397174bb52c99)"}

@@ -19,7 +19,7 @@ SUITES=($( find ${SUITESDIR} -mindepth 1 -maxdepth 1 -type d ))
 
 # LLVM_PATH  => The place where I have all the LLVM tools
 echo "LLVM_PATH is set to: <${LLVM_PATH}>"
-[[ -n $LLVM_PATH ]] || LLVM_PATH="/home/condekind/LLVM/9.0.0/build/bin"
+[[ -n $LLVM_PATH ]] || LLVM_PATH="/home/condekind/LLVM/10/build/bin"
 [[ -d "${LLVM_PATH}" ]] || {
   echo "One must define LLVM_PATH before running tf"
   exit 1
@@ -56,6 +56,7 @@ function set_vars() {
 	else
 		BENCH_NAME=$(basename $(pwd))
 		SRC_FILES=($(find . -name '*.c' -printf '%p\n' | sort -u ))
+		COMPILE_FLAGS=" -I. "
 	fi
 
   # BENCH_NAME comes from info.sh

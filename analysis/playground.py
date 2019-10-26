@@ -113,7 +113,7 @@ for suite in df.index.unique(0):
         #plt.savefig('data/img/{}_{}.png'.format(suite, (cnt % 4) + 1), format='png')  # individual figures
         #plt.close()  # individual figures
         
-plt.savefig('data/all.png', format='png')
+plt.savefig('data/all.png', transparent=True, format='png')
 #plt.show()
 
 

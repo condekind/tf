@@ -11,3 +11,4 @@ suites/tf/sim/Output/sim.res
 
 qtemp/
 suites/**
+analysis/data/*.json

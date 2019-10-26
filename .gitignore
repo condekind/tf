@@ -10,9 +10,4 @@ suites/tf/sim/Output/sim.res
 *.tmp
 
 qtemp/
-suites/AnghaBench_WholeFiles
-suites/CSmith_10K
-suites/deepsmith
-suites/largest10
-suites/ldrgen_10K
-
+suites/**

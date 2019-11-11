@@ -1,5 +1,0 @@
-BENCH_NAME="fib2"
-
-SRC_FILES=( "fib2.c" )
-COMPILE_FLAGS=" -lm "
-RUN_OPTIONS=" "

@@ -1,5 +1,0 @@
-BENCH_NAME="RealMM"
-
-SRC_FILES=( "RealMM.c" )
-COMPILE_FLAGS=" -lm "
-RUN_OPTIONS=" "

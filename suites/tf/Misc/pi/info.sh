@@ -1,5 +1,0 @@
-BENCH_NAME="pi"
-
-SRC_FILES=( "pi.c" )
-COMPILE_FLAGS=" -lm "
-RUN_OPTIONS=" "

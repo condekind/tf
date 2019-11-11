@@ -1,3 +1,7 @@
+suites
+qtemp
+analysis/data/*.json
+
 *.rbc
 *.cbc
 *.obc
@@ -9,6 +13,3 @@ suites/tf/sim/Output/sim.res
 *.temp
 *.tmp
 
-qtemp/
-suites/**
-analysis/data/*.json

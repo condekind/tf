@@ -1,5 +1,0 @@
-BENCH_NAME="ary3"
-
-SRC_FILES=( "ary3.c" )
-COMPILE_FLAGS=" -lm "
-RUN_OPTIONS=" "

@@ -1,5 +1,0 @@
-BENCH_NAME="ks"
-
-SRC_FILES=( "KS-1.c" "KS-2.c" )
-COMPILE_FLAGS=" "
-RUN_OPTIONS=" KL-4.in "

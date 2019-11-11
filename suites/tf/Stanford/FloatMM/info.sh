@@ -1,5 +1,0 @@
-BENCH_NAME="FloatMM"
-
-SRC_FILES=( "FloatMM.c" )
-COMPILE_FLAGS=" -lm "
-RUN_OPTIONS=" "

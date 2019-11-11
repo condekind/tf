@@ -1,5 +1,0 @@
-BENCH_NAME="test"
-
-SRC_FILES=( "t11.c" )
-COMPILE_FLAGS=" "
-RUN_OPTIONS="10"

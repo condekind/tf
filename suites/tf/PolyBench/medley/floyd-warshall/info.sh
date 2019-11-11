@@ -1,6 +1,0 @@
-BENCH_NAME="floyd-warshall"
-
-SRC_FILES=($(ls *.c))
-
-COMPILE_FLAGS=" -I. -DPOLYBENCH_DUMP_ARRAYS "
-RUN_OPTIONS=" "

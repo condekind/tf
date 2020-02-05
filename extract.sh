@@ -29,6 +29,8 @@ setvars() {
 
   # These will only be set if they're not defined in an info.sh file
   : "${source_files:=$(find "$(pwd)" -name '*.c' -printf '%p\n' | sort -u )}"
+  source_names=( "${source_files[@]}" )
+  for ((i=0;i<${#source_names[@]};i++)); do source_names[i]="${source_names[i]##"$bench/"}"; done
   : "${COMPILE_FLAGS:=" -I. "}"
 
   # removes math library linking flag, which isn't used with clang's -c param
@@ -75,7 +77,7 @@ compile() {
 bcstats() {
   # ---------------------------- bytecode to stats -----------------------------
   unset tmp_buffer
-  tmp_buffer="header://:${suite##*/}://:${benchrp}://:${source_files[@]}://:endheader"
+  tmp_buffer="header://:${suite##*/}://:${benchrp}://:${source_names[@]}://:endheader"
   tmp_buffer="${tmp_buffer}${br}"$("$LLVM_PATH"/opt           \
                                   -mem2reg                    \
                                   -O0                         \

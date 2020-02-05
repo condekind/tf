@@ -1,61 +1,72 @@
 #!/bin/bash
 
-setvars() {
+DEBUG=1
 
-
-  # variables specific to each benchmark, set on /suite/.../bench/.../info.sh
-  [[ -f info.sh ]] && echo "Sourcing info.sh from $(pwd)" && source info.sh
-
-  # These will be overwritten if they're defined in an info.sh file
-  BENCH_NAME=${BENCH_NAME:-$(basename $(cd ..; pwd))}
-  SRC_FILES=${SRC_FILES:-$(find $(pwd) -name '*.c' -printf '%p\n' | sort -u )}
-  COMPILE_FLAGS=${COMPILE_FLAGS:-" -I. "}
-
-  # BENCH_NAME comes either from provided info.sh or the 'else' block above
-  lnk_name="$BENCH_NAME.rbc"
-  if [[ -n $CPU2006 && $CPU2006 -eq 1 ]]; then
-    if [[ $(uname -s) == "Linux" ]]; then
-      rbc_name="$BENCH_NAME.linux"
-    else
-      rbc_name="$BENCH_NAME.llvm"
-    fi
-  fi
-
-  # cpu specific stuff
-  [[ ${bench} =~ "cpu2006" ]] && CPU2006=1
-  # sometimes we need to use clang++
-  [[ -n $COMPILER   ]] || COMPILER="clang"
-  # We can specify STDIN to something other than /dev/stdin
-  [[ -n $STDIN      ]] || STDIN=/dev/null
-  # And STDOUT default is /dev/null. 
-  [[ -n $STDOUT     ]] || STDOUT=/dev/null
-  # removes math library linking flag, which isn't used with clang's -c param
-  COMPILE_FLAGS="${COMPILE_FLAGS/\-lm/}"
-
-  echo "SRC_FILES: ${SRC_FILES[@]}"
-  return 0
+:: () {
+  [[ $DEBUG -eq 1 ]] && echo "$1"
 }
 
 
-cleanup() { rm -f *{.bc,.rbc,.txt} ; }
+sint () {
+  [[ -n "$all_buffer" ]] && echo "$all_buffer" >> "$OUTFILE"
+  exit 1
+}
+
+
+setvars() {
+
+  # variables specific to each benchmark, set on /suite/.../bench/.../info.sh
+  [[ -f info.sh ]]         &&
+    source info.sh         &&
+    [[ -n $source_files ]] &&
+    for ((i=0;i<${#source_files[@]};i++)); do source_files[i]="$(readlink -f "${source_files[i]}")"; done
+
+  # benchrp: bench relative path to suite without the starting /
+  benchrp="${bench##"$suite"}"
+  benchrp="${benchrp#/}"
+  benchname="${benchrp//\//-}"  # benchrp valid file name (subst. / by -)
+  extra_flags="${EXTRA_FLAGS:-""}"
+
+  # These will only be set if they're not defined in an info.sh file
+  : "${source_files:=$(find "$(pwd)" -name '*.c' -printf '%p\n' | sort -u )}"
+  : "${COMPILE_FLAGS:=" -I. "}"
+
+  # removes math library linking flag, which isn't used with clang's -c param
+  compile_flags="${COMPILE_FLAGS/\-lm/}"
+
+  # sometimes we need to use clang++
+  : "${COMPILER:="clang"}"
+  # We can specify STDIN to something other than /dev/stdin
+  : "${STDIN:=/dev/null}"
+  # And STDOUT default is /dev/null. 
+  : "${STDOUT:=/dev/null}"
+
+  # info required by specific benchmarks
+  # csmith: requires compiling csmith, then copying the runtime folder to $SUITESDIR/csmith-suite-name
+  [[ ${suite##*/} == "csmith_kernels_largest_10k" ]] && extra_flags=" -I../runtime -Wno-everything "
+  # cpu2006 might provide the bytecodes already, no need to compile it again
+  [[ $(pwd) =~ "cpu2006" ]] && CPU2006=1 && rbc_name="$bench_name.$LIBSUFFIX"
+
+  return 0
+}
+
+cleanup() {
+  rm -f *{.bc,.rbc,.txt}
+  [[ -n $ibc ]] && rm -f *.$ibc
+  [[ -n $lbc ]] && rm -f *.$lbc
+}
 
 
 compile() {
-
-  # csmith requires extra args
-  [[ ${suite##*/} == "csmith_kernels_largest_10k" ]] && EXTRA_FLAGS=" -I../runtime -Wno-everything "
-  
+  [[ -n $source_files ]] || return 2
   # ---------------------------- source to bytecode ----------------------------
-  if [[ -n $CPU2006 && $CPU2006 -eq 1 ]]; then $LLVM_PATH/opt -S $rbc_name -o $lnk_name
-  else  # SRC_FILES is the variable with all the files we're gonna compile
-    [[ -n $SRC_FILES ]] || return 2
-    parallel --tty --jobs=${JOBS} $LLVM_PATH/$COMPILER $COMPILE_FLAGS $EXTRA_FLAGS -Xclang \
-    -disable-O0-optnone -S -c -emit-llvm {} -o {.}.bc ::: "${SRC_FILES[@]}" # 2>>$ERRFILE
-    
-    parallel --tty --jobs=${JOBS} $LLVM_PATH/opt -S {.}.bc -o {.}.rbc ::: "${SRC_FILES[@]}" # 2>>$ERRFILE
-  
-    # Merge all the rbcs into a big rbc:
-    $LLVM_PATH/llvm-link -S *.rbc -o ${lnk_name##*/}
+  if [[ -n $CPU2006 && $CPU2006 -eq 1 ]]; then $LLVM_PATH/opt -S $rbc_name -o $benchname.$lbc
+  else
+    parallel --tty --jobs=$JOBS $LLVM_PATH/$COMPILER $compile_flags $extra_flags -Xclang \
+    -disable-O0-optnone -S -c -emit-llvm {} -o {.}.$ibc ::: "${source_files[@]}"
+
+    # Merge all the individual bytecodes into a big linked one:
+    $LLVM_PATH/llvm-link -S *.$ibc -o $benchname.$lbc
   fi
   return 0
 }
@@ -63,86 +74,103 @@ compile() {
 
 bcstats() {
   # ---------------------------- bytecode to stats -----------------------------
-  OUTBUFFER="${BASEDIR}/.buffer.tmp"
-  echo "header://${suite##*/};${BENCH_NAME}" >> "$OUTBUFFER"
-  $LLVM_PATH/opt                    \
-        -mem2reg                    \
-        -O0                         \
-        ${USERPASSES[@]}            \
-        -instcount                  \
-        -stats                      \
-        -S                          \
-        ${lnk_name}                 \
-        -disable-output 2>> "$OUTBUFFER"
+  unset tmp_buffer
+  tmp_buffer="header://:${suite##*/}://:${benchrp}://:${source_files[@]}://:endheader"
+  tmp_buffer="${tmp_buffer}${br}"$("$LLVM_PATH"/opt           \
+                                  -mem2reg                    \
+                                  -O0                         \
+                                  ${user_passes[@]}           \
+                                  -instcount                  \
+                                  -stats                      \
+                                  -S                          \
+                                  $benchname.$lbc             \
+                                  -disable-output 2>&1)""
   if [[ $? -eq 0 ]]; then
-    cat "$OUTBUFFER" >> "$OUTFILE"
+    STTY=$(stty -g) 
+    stty intr undef
+    all_buffer="${all_buffer}${br}${br}${tmp_buffer}"
+    stty ${STTY}
 	else
-    cat "$OUTBUFFER" >> "$ERRFILE"
+    STTY=$(stty -g) 
+    stty intr undef
+    echo "$tmp_buffer" >> "$ERRFILE"
+    stty ${STTY}
   fi
-  rm $OUTBUFFER
-  unset OUTBUFFER
+  unset tmp_buffer
   return 0
 }
 
 
-delvars() { unset {COMPILER,STDIN,STDOUT,RUN_OPTIONS,BENCH_NAME,SRC_FILES,COMPILE_FLAGS,CPU2006} ; }
+delvars() {
+  unset {COMPILER,STDIN,STDOUT,COMPILE_FLAGS,CPU2006,SRC_FILES,BENCH_NAME}
+  unset {benchrp,benchname,compile_flags,source_files,extra_flags}
+}
 
 
 #---------------------------------- Variables ----------------------------------
 
 # Parallel *execution* (not compilation)
-[[ -n $JOBS ]]        || JOBS=8
+: "${JOBS:=8}"
 
-# Set the lib SUFFIX according to OS
-[[ $(uname -s) == "Linux" ]] && SUFFIX="so" || SUFFIX="dylib"
+# Set the lib LIBSUFFIX according to OS
+[[ $(uname -s) == "Linux" ]] && LIBSUFFIX="so" || LIBSUFFIX="dylib"
 
-[[ -n $BASEDIR ]]     || BASEDIR="$(pwd)"
-[[ -n $SUITESDIR ]]   || SUITESDIR="$BASEDIR/suites/"
+: "${BASEDIR:="$(pwd)"}"
+: "${SUITESDIR:="$BASEDIR/suites/"}"
 
 # Output from passes ran in comp.sh
-[[ -n $OUTFILE ]]     || OUTFILE="$(pwd)/output/stats.txt"
+: "${OUTFILE:="$(pwd)/output/stats.txt"}"
 
 # Error from passes ran in comp.sh
-[[ -n $ERRFILE ]]     || ERRFILE="$(pwd)/output/error.txt"
+: "${ERRFILE:="$(pwd)/output/error.txt"}"
 
 # Custom user passes file
-[[ -n $PASSFILE ]]    || PASSFILE="$(pwd)/info/passes.txt"
+: "${PASSFILE:="$(pwd)/info/passes.txt"}"
 
 # Custom user passes array
-[[ -n $USERPASSES ]]  || readarray -t USERPASSES < $PASSFILE
+[[ -n $user_passes ]]  || readarray -t user_passes < $PASSFILE
 
 # LLVM_PATH  => The place where I have all the LLVM tools
-[[ -n $LLVM_PATH ]]   || LLVM_PATH="/home/condekind/LLVM/10/build/bin"
+: "${LLVM_PATH:="/home/condekind/LLVM/10/build/bin"}"
 [[ -d $LLVM_PATH ]]   || echo "invalid LLVM_PATH: $LLVM_PATH"
+
+br=$'\n' # line break
+ibc=ibc  # individual bytecoode extension
+lbc=lbc  # linked llvm bytecoode extension
+: "${all_buffer:=""}"
 
 #-------------------------------------------------------------------------------
 
 echo "--------------------------------------"
 echo "JOBS        is set to $JOBS"
-echo "SUFFIX      is set to $SUFFIX"
+echo "LIBSUFFIX   is set to $LIBSUFFIX"
 echo "BASEDIR     is set to $BASEDIR"
 echo "SUITESDIR   is set to $SUITESDIR"
 echo "LLVM_PATH   is set to $LLVM_PATH"
-echo "USERPASSES  is set to ${USERPASSES[@]}"
+echo "user_passes is set to ${user_passes[@]}"
 echo "--------------------------------------"
 
 #-------------------------------- Main Loop ------------------------------------
 
-[[ -n $SUITES ]]      || SUITES=($( find ${SUITESDIR} -mindepth 1 -maxdepth 1 -type d ))
-echo "suites: $SUITES"
+trap sint INT
+
+[[ -n $SUITES ]]  || SUITES=($( find "${SUITESDIR}" -mindepth 1 -maxdepth 1 -type d ))
+echo "suites: ${SUITES[@]}"
 for suite in "${SUITES[@]}"; do
   cd $suite
-  BENCHS=($( find $(pwd) -name '*.c' -printf '%h\n' | sort -u ))
-  echo "benchs: $BENCHS"
+  BENCHS=($( find "$(pwd)" -name '*.c' -printf '%h\n' | sort -u ))
+  echo "benchs: ${BENCHS[@]}"
   for bench in "${BENCHS[@]}"; do
     cd $bench && echo "Starting $bench"
-    setvars
+    setvars || ( delvars; continue )
     cleanup
-    compile
+    compile || ( delvars; continue )
     bcstats
     delvars
   done
 done
 cd $BASEDIR
+
+echo "$all_buffer" >> "$OUTFILE"
 
 #-------------------------------------------------------------------------------

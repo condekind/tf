@@ -1,6 +1,7 @@
 #!/bin/bash
 
 DEBUG=1
+LOCK=0
 
 :: () {
   [[ $DEBUG -eq 1 ]] && echo "$1"
@@ -8,7 +9,14 @@ DEBUG=1
 
 
 sint () {
-  [[ -n "$all_buffer" ]] && echo "$all_buffer" >> "$OUTFILE"
+  STTY=$(stty -g) 
+  stty intr undef
+  echo "SIGINT Received: saving successful extraction to $OUTFILE..."
+  if [[ $LOCK -ne 1 && -n "$all_buffer" ]]; then
+    LOCK=1
+    echo "$all_buffer" >> "$OUTFILE"
+  fi
+  stty ${STTY}
   exit 1
 }
 

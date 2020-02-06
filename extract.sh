@@ -1,13 +1,7 @@
 #!/bin/bash
 
-DEBUG=1
-LOCK=0
 
-:: () {
-  [[ $DEBUG -eq 1 ]] && echo "$1"
-}
-
-
+# SIGINT trap to avoid losing what was done already
 sint () {
   STTY=$(stty -g) 
   stty intr undef
@@ -24,6 +18,7 @@ sint () {
 setvars() {
 
   # variables specific to each benchmark, set on /suite/.../bench/.../info.sh
+  # source_files are expanded to their absolute path by readlink
   [[ -f info.sh ]]         &&
     source info.sh         &&
     [[ -n $source_files ]] &&
@@ -35,8 +30,10 @@ setvars() {
   benchname="${benchrp//\//-}"  # benchrp valid file name (subst. / by -)
   extra_flags="${EXTRA_FLAGS:-""}"
 
-  # These will only be set if they're not defined in an info.sh file
+  # These will only be set here if they're not defined in an info.sh file
   : "${source_files:=$(find "$(pwd)" -name '*.c' -printf '%p\n' | sort -u )}"
+
+  # source_names are the relative paths of the .c files to the benchmark
   source_names=( "${source_files[@]}" )
   for ((i=0;i<${#source_names[@]};i++)); do source_names[i]="${source_names[i]##"$bench/"}"; done
   : "${COMPILE_FLAGS:=" -I. "}"
@@ -52,13 +49,14 @@ setvars() {
   : "${STDOUT:=/dev/null}"
 
   # info required by specific benchmarks
-  # csmith: requires compiling csmith, then copying the runtime folder to $SUITESDIR/csmith-suite-name
+  # csmith: requires compiling csmith, then copying the runtime folder to $suitesdir/csmith-suite-name
   [[ ${suite##*/} == "csmith_kernels_largest_10k" ]] && extra_flags=" -I../runtime -Wno-everything "
   # cpu2006 might provide the bytecodes already, no need to compile it again
   [[ $(pwd) =~ "cpu2006" ]] && CPU2006=1 && rbc_name="$bench_name.$LIBSUFFIX"
 
   return 0
 }
+
 
 cleanup() {
   rm -f *{.bc,.rbc,.txt}
@@ -67,6 +65,7 @@ cleanup() {
 }
 
 
+# compiles all current source_files, then links their bytecode into a single file
 compile() {
   [[ -n $source_files ]] || return 2
   # ---------------------------- source to bytecode ----------------------------
@@ -82,6 +81,7 @@ compile() {
 }
 
 
+# bytecode statistics extraction
 bcstats() {
   # ---------------------------- bytecode to stats -----------------------------
   unset tmp_buffer
@@ -112,21 +112,25 @@ bcstats() {
 
 
 delvars() {
-  unset {COMPILER,STDIN,STDOUT,COMPILE_FLAGS,CPU2006,SRC_FILES,BENCH_NAME}
-  unset {benchrp,benchname,compile_flags,source_files,extra_flags}
+  unset {COMPILER,STDIN,STDOUT,COMPILE_FLAGS,CPU2006}
+  unset {benchrp,benchname,compile_flags,source_files,source_names,extra_flags}
 }
 
 
 #---------------------------------- Variables ----------------------------------
 
-# Parallel *execution* (not compilation)
+# Probably not needed, just wanted to make sure multiple SIGINT's didn't trigger
+# the handle's main body more than once
+LOCK=0  # SIGINT lock
+
+# Parallel compilation of individual files (clang), but not llvm-link or opt
 : "${JOBS:=8}"
 
-# Set the lib LIBSUFFIX according to OS
+# Set the lib LIBSUFFIX according to OS (only used for cpu2006 so far)
 [[ $(uname -s) == "Linux" ]] && LIBSUFFIX="so" || LIBSUFFIX="dylib"
 
 : "${BASEDIR:="$(pwd)"}"
-: "${SUITESDIR:="$BASEDIR/suites/"}"
+: "${suitesdir:="$BASEDIR/suites/"}"
 
 # Output from passes ran in comp.sh
 : "${OUTFILE:="$(pwd)/output/stats.txt"}"
@@ -147,7 +151,7 @@ delvars() {
 br=$'\n' # line break
 ibc=ibc  # individual bytecoode extension
 lbc=lbc  # linked llvm bytecoode extension
-: "${all_buffer:=""}"
+: "${all_buffer:=""}" # main buffer to avoid excessive file access
 
 #-------------------------------------------------------------------------------
 
@@ -155,7 +159,7 @@ echo "--------------------------------------"
 echo "JOBS        is set to $JOBS"
 echo "LIBSUFFIX   is set to $LIBSUFFIX"
 echo "BASEDIR     is set to $BASEDIR"
-echo "SUITESDIR   is set to $SUITESDIR"
+echo "suitesdir   is set to $suitesdir"
 echo "LLVM_PATH   is set to $LLVM_PATH"
 echo "user_passes is set to ${user_passes[@]}"
 echo "--------------------------------------"
@@ -164,13 +168,13 @@ echo "--------------------------------------"
 
 trap sint INT
 
-[[ -n $SUITES ]]  || SUITES=($( find "${SUITESDIR}" -mindepth 1 -maxdepth 1 -type d ))
-echo "suites: ${SUITES[@]}"
-for suite in "${SUITES[@]}"; do
+# walks suite/benchmark/*.c
+# a benchmark is a unique path segment between the suite and any .c files
+[[ -n $suites ]]  || suites=($( find "${suitesdir}" -mindepth 1 -maxdepth 1 -type d ))
+for suite in "${suites[@]}"; do
   cd $suite
-  BENCHS=($( find "$(pwd)" -name '*.c' -printf '%h\n' | sort -u ))
-  echo "benchs: ${BENCHS[@]}"
-  for bench in "${BENCHS[@]}"; do
+  benchs=($( find "$(pwd)" -name '*.c' -printf '%h\n' | sort -u ))
+  for bench in "${benchs[@]}"; do
     cd $bench && echo "Starting $bench"
     setvars || ( delvars; continue )
     cleanup

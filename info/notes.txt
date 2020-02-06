@@ -1,42 +1,37 @@
 
-The following command was executed..
+The unity branch of tf is a reduced version of the master. It doesn't contain
+some of the functions that are related to instrumentation and execution. Here
+are the most important variables and their contents:
 
-# array that stores the 
-INFO_ARR=($( find src_benchmarks/**/* -name "info.sh" ));
+suitesdir:    absolute path
+suites:       array -> absolute paths
+suite:        absolute path
+benchs:       array -> absolute paths
+bench:        absolute path
+source_files: array -> absolute path
+source_names: array -> $source_files relative to its $bench
 
-for i in ${INFO_ARR[@]} ; do
-	cat ${i} | grep "[^=]*=" ;
-done |
-while read line ; do
-	line=${line%%=*}
-	echo ${line##\#*} ;
-done |
-sort -u
+What is considered a suite, benchmark or file is defined as:
+  - suite: any folder placed on suites is considered a single suite
+  - benchmark: any folder that contains a .c file is considered a benchmark. To
+avoid duplicate and meaningless names (such as "src"), the benchmark is uniquely
+identified by the path of this folder, relative to its suite. So it might
+contain slashes, which are invalid filenames. If naming a file with the
+benchmark name is needed, substitute the/slashes with-dashes. The only situation
+where this happens in the extraction is the linkage of the source files LLVM
+bytecodes in a single file. Apart from the TF programs, all the other suites
+have the format suite/benchmark/file, with no intermediate folders as part of
+the benchmark identification. This happens because all of them are either
+synthesized or preprocessed, therefore they don't come straight from a real
+structured project.
+  - source files: any .c file
 
-..in order to check which variables were set by specific benchmarks. Results:
-
-  bench_name            # used, same name as benchmark directory
-  COMPILE_FLAGS         # used !! 
-  COMPILER              # used, rare
-  HASH_PROGRAM_OUTPUT   # defined but unused
-  PROJ_SRC_DIR          # used !! check if there's any entry that isn't $(pwd)
-  RUN_OPTIONS           # input info, unused for this project
-  source_files          # used
-  STDIN                 # input info, unused for this project
-
-
-Checking values:
-
-COMPILE_FLAGS
-
-for i in ${INFO_ARR[@]} ; do
-  cat ${i} | grep "[^=]*="
-done |
-while read line ; do
-  if [[ ${line} =~ "COMPILE_FLAGS" ]] ; then
-    echo ${line}
-  fi
-done | sort -u
+Tools:
+  - create_dirs.sh: If a suite comes with all the source_files together in a
+single folder, you can either copy this script to it and run it as:
+> $ ./create_dirs.sh .
+  or leave it in ./tools and run:
+> $ ./tools/create_dirs.sh <dirWithManyFiles>
 
 Values found:
 

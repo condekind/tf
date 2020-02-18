@@ -1,4 +1,44 @@
-Check if results are different if the benchmarks are compiled with:
-	LLVM8
-	LLVM9
-	LLVM10
+
+Angular Cheatsheet:
+
+#     - variable declaration
+()    - event binding
+[]    - property binding
+[()]  - two-way property binding
+{{ }} - interpolation
+*     - structural directives
+
+To do: Angha Team
+
+1.a) Create an online predictor, so that users can enter programs, and we can output sequences of optimizations for those programs (get sequences with Anderson)
+1.b) Add a search engine to the webpage.
+2.a) Change the granularity of the predictor to operate on individual functions.
+2.b) Check if it's possible to use gcc's infrastructure on a per-function basis.
+3.a) Study better distance metrics between programs.
+3.b) Define a methodology to determine when a distance is better than another.
+4.a) Study the importance of metrics to predict optimization sequences.
+4.b) Maybe take a look into anova.
+4.c) Check with the ML people how to find out when a feature is good.
+5.a) Find ways to execute the benchmarks, or some of the benchmarks.
+5.b) Check if the output of the benchmarks is correct.
+
+To do: Angha (Bruno & Jeronimo)
+
+[DONE] 01 page-angha: Finish migrating what already exists to the new Angha page.
+[DONE] 02 page-angha: Create page tab with a code editor
+[----] 03 server.go: Successfully receive user input from the editor
+[----] 04 cxp/main.go: Finish cxp
+[DONE] 05 server.go: Feed cxp with user input from the page and return the features to the page
+[WIP ] 06 ncode-search: Implement code search with Euclidean Distance and other methods from scikit-learn
+[----] 07 server.go: Feed ncode-search with features from cxp, return K closest programs to the page
+[DONE] 08 page-angha: Add a new code editor besides the first one on the page to view the ith of the K programs received. To switch between the closest programs on the new editor, use a carousel-like interface, with the "dots" representing each tab, like in https://mdbootstrap.com/docs/angular/advanced/carousel/#with-captions
+[----] 09 data-angha: Separate the database from the projects, start using its own repo as a dedicated place to store the non-volatile info (Lucene/Java)
+[----] 10 data-angha: Add Anderson's feature vectors to the database, so each program will also contain up to N optimization sequences, all better than -Oz
+[PART] 11 page-angha: Create table-like interface to display metadata related to the currently selected closest program (metadata we have until now: program features and optimization sequences)
+[----] 12 server.go: Send the metadata together with the closest programs
+[DONE] 13 page-angha: Create page tab named "About" with info on the lab, members, contact, etc.
+[----] 14 playground.py (external): Translate my plots and analysis to javascript
+[----] 15 ncode-search: Benchmark performance to assess if changing the technology is needed (alternatives: javascript (preferred), Lucene/Java)
+[----] 16 Document the project using GitHub wikis
+[----] 17 Study Breno's extractor to start collecting more info from repositories in the future
+[----] 18 Study Leandro's Psyche-C to start executing programs in the future

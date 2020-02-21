@@ -166,7 +166,7 @@ echo "--------------------------------------"
 
 #-------------------------------- Main Loop ------------------------------------
 
-trap sint INT
+trap sint INT; trap sint QUIT; trap sint TERM; trap sint EXIT;
 
 # walks suite/benchmark/*.c
 # a benchmark is a unique path segment between the suite and any .c files

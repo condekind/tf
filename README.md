@@ -7,6 +7,3 @@ as a tool for the user to run the benchmarks.
 
 The end goal here is to compile every .c file and extract statistics using
 the -stats flag.
-
-Currently, running run.sh is dumping a json with statistics related to the
-passes specified in comp.sh and info/passes.txt
